@@ -5,12 +5,11 @@ import java.util.Collection;
 import java.util.Optional;
 import java.util.UUID;
 
-import org.coffeehouse.home.reservation.exceptions.ReservationAlreadyExistsException;
 import org.coffeehouse.home.reservation.exceptions.ReservationNotFoundException;
 
 public interface ReservationDao {
 
-	public Reservation save( Reservation reservation ) throws ReservationAlreadyExistsException;
+	public Reservation save( Reservation reservation );
 	
 	public Reservation modify( UUID uuid, Reservation reservation ) throws ReservationNotFoundException ;
 	

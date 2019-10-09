@@ -5,7 +5,6 @@ import java.util.Collection;
 import java.util.Optional;
 import java.util.UUID;
 
-import org.coffeehouse.home.reservation.exceptions.ReservationAlreadyExistsException;
 import org.coffeehouse.home.reservation.exceptions.ReservationNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -24,7 +23,7 @@ public class ReservationH2DaoImpl implements ReservationDao {
 	}
 
 	@Override
-	public Reservation save(Reservation reservation) throws ReservationAlreadyExistsException {
+	public Reservation save(Reservation reservation) {
 		mReservationCache.add(reservation);
 		Reservation saved = repository.save(reservation);
 		log.debug("Saved reservation with uuid: " + saved.getId());

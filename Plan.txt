@@ -1,0 +1,121 @@
+Constraints:
+To streamline the reservations a few constraints need to be in place:
+
+C1. The campsite will be free for all. 
+C2. The campsite can be reserved for max 3 days. 
+C3. The campsite can be reserved minimum 1 day(s) ahead of arrival and up to 1 month in advance. 
+C4. Reservations can be cancelled anytime. 
+C5. For the sake of simplicity assume the check-in & check-out time is 12:00 AM
+
+System Requirements:
+R1.	The users will need to find out when the campsite is available. So the system should expose an API to provide information of the availability of the campsite for a given date range with the default being 1 month. 
+R2.	Provide an end point for reserving the campsite. The user will provide his/her email & full name at the time of reserving the campsite along with intended arrival date and departure date. Return a unique booking identifier back to the caller if the reservation is successful. 
+R3.	The unique booking identifier can be used to modify or cancel the reservation later on. Provide appropriate end point(s) to allow modification/cancellation of an existing reservation 
+R4.	Due to the popularity of the island, there is a high likelihood of multiple users attempting to reserve the campsite for the same/overlapping date(s). Demonstrate with appropriate test cases that the system can gracefully handle concurrent requests to reserve the campsite. Provide appropriate error messages to the caller to indicate the error cases. In general, the system should be able to handle large volume of requests for getting the campsite availability. 
+R5.	There are no restrictions on how reservations are stored as as long as system constraints are not violated.
+
+Assumptions
+T1.	Dates will be entered in the format of LocalDate. YYYY-MM-DD.
+T2.	Reservation Id's are in the form of UUID's
+
+Required API’s:
+A1.	Availability: (R1)
+		a.	Arguments: data range, if null then 1 month. (C3)
+		b.	Returns: list of available dates.
+A2.	Reserve: (R2)
+		a.	Arguments: email, full name, arrival and departure date. (C2, C3)
+		b.	Returns: reservation with unique reservation id.
+A3.	Modify: (R3)
+		a.	Arguments: unique reservation id, date range. (C2,C3)
+		b.	Returns: reservation with new reservation id.
+A4.	Cancel: (R3)
+		a.	Arguments: unique reservation id (C4)
+		b.	Returns: 200 OK.
+
+Custom Exceptions:
+E1.	ReservationNotFoundException: unique reservation id does not exist.
+		a.	Trying to Modify a reservation with a unique reservation id that does not exist.
+		b.	Trying to Cancel a reservation with a unique reservation id that does not exist.
+E2.	DateRangeException: 
+		a.	Trying to reserve the campsite for more than 3 days.
+		b.	Trying to reserve the campsite exceeding 1 month in advance.
+		c.	Trying to query for availability exceeding 1 month in advance.
+
+Stories:
+S1.	Reservation Object
+		a.	Object to store a reservation. Email, Full Name, Start and End Date.
+S2.	Interface for Storing, deleting and modifying a reservation object
+		a.	Unit test for H2
+S3.	Interface for querying reservation objects
+		a.	Query by unique reservation id
+		b.	Query for reserved dates in date range
+		c.	Unit test for H2
+S4.	Api for querying availability (A1)
+		a.	Executable job
+		b.	Unit tests for job
+S5.	Api for reserving campsite (A2)
+		a.	Execurable job
+		b.	Validate reservation is max 3 days. (C2)
+		c.	Validate reservation is within the next month (C3)
+		d.	Unit test for Exception
+S6.	Api for modifying a reservation
+		a.	Executable job
+		b.	Validate that the reservation exists
+		c.	alidate reservation is max 3 days. (C2)
+		d.	Validate reservation is within the next month (C3)
+		e.	Unit test for Exception
+S7.	Cancel a reservation
+		a.	Executable job
+		b.	Validate that the reservation exists
+		c.	Release the reserved dates back to Availability pool.
+		d.	Unit test for Exceptions
+S8.	Cache Availability Dates
+		a.	Cache 1 month of availability.
+		b. 	Use is toggleable
+		c.	Scheduled job that will keep the Cache up to date.
+		d.	Update Cache on Reservation, Modification and Cancellation.
+S9.	Modify Availability Api to query the Cache.
+		a. Toggleable
+		b. future -> New, Modify, Cancel should check cache for availability before adding to executor queue.
+S10.Query Executor
+		a.	Executor to run Query jobs. Default 5 threads.
+		b.	Executor should have multiple threads.
+S11.Update Executor
+		a.	Executor to run Update jobs. Reserve Modify, Cancel.
+		b.	Executor should have a single thread.
+S12.Exception Handling
+		a. Catch bad input fron paramPath
+		b. Catch bad date format
+S13.Rest Service Result wrapping
+S14.IntegrationTesting
+		a. Runnable thread for each action
+			i. New Reservation
+			ii. Modify Reservation
+			iii. Cancel Reservation
+			iv. Availability
+		b. Statistics Handler
+			i. Keep track of stats
+			ii. Keep track of successful reservations from New Reservations to feed into Modify and Cancel Reservations
+		
+Endpoints
+GET
+localhost:8080/reservation/{id} 	-- Find a reservation by UUID
+localhost:8080/reservation/			-- Return all reservations
+localhost:8080/reservation/availability/{startDate}/{endDate}	-- Return all available dates between 2 dates. Both startDate and endDate are required
+localhost:8080/reservation/availability							-- Return all available dates from 1 day(s) ahead of arrival and up to 1 month in advance. 
+POST
+localhost:8080/reservation/reserve	-- Create a new reservation. returns Reservation with id
+@RequestBody Reservation    
+	name
+	email
+	startDate
+	endDate
+PUT
+localhost:8080/reservation/modify/{id} -- modify a reservation by UUID. returns Reservation with same id but updated dates
+@RequestBody Reservation    
+	name
+	email
+	startDate
+	endDate
+DELETE
+localhost:8080/reservation/cancel/{id} -- delete a reservation by UUID
